@@ -2,12 +2,12 @@
     <string name="app_name">O-map GPS tracker</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Android Studio</string>
-    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_title">O-map GPS tracker</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
 
     <string name="menu_home">Home</string>
+    <string name="menu_track">Track</string>
     <string name="menu_gallery">Gallery</string>
     <string name="menu_slideshow">Slideshow</string>
 
@@ -15,4 +15,7 @@
     <string name="point_button">Point</string>
     <string name="track_start_btn">Start track</string>
     <string name="track_stop_btn">Stop track</string>
+    <string name="all_time_track">All time track</string>
+    <string name="bluetooth_text">Bluetooth</string>
+    <string name="search_bluetooth">Bluetooth search</string>
 </resources>
