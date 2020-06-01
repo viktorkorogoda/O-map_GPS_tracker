@@ -20,62 +20,113 @@
         app:navGraph="@navigation/mobile_navigation" />
 
     <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="76dp"
+        android:id="@+id/save_point_button"
+        android:layout_width="195dp"
+        android:layout_height="50dp"
         android:layout_marginBottom="16dp"
         android:text="@string/point_button"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/button2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="68dp"
-        android:layout_marginBottom="16dp"
+        android:id="@+id/start_track_button"
+        android:layout_width="182dp"
+        android:layout_height="46dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginBottom="18dp"
         android:text="@string/track_start_btn"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/button" />
-
-    <Spinner
-        android:id="@+id/bluetooth_spinner"
-        android:layout_width="194dp"
-        android:layout_height="26dp"
-        android:layout_marginStart="36dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/textView" />
+        app:layout_constraintStart_toEndOf="@+id/save_point_button" />
 
     <Switch
-        android:id="@+id/switch1"
+        android:id="@+id/all_time_track_switch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="36dp"
-        android:layout_marginTop="64dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="16dp"
         android:text="@string/all_time_track"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="36dp"
-        android:layout_marginTop="76dp"
-        android:text="@string/bluetooth_text"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/switch1"
-        tools:text="@string/bluetooth_text" />
-
     <Button
-        android:id="@+id/button3"
+        android:id="@+id/bluetooth_search_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginTop="176dp"
+        android:layout_marginStart="124dp"
+        android:layout_marginTop="16dp"
         android:text="@string/search_bluetooth"
         android:textSize="12sp"
-        app:layout_constraintStart_toEndOf="@+id/bluetooth_spinner"
+        app:layout_constraintStart_toEndOf="@+id/all_time_track_switch"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <ScrollView
+        android:id="@+id/point_sign_scroll_view"
+        android:layout_width="56dp"
+        android:layout_height="183dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="59dp"
+        app:layout_constraintBottom_toTopOf="@+id/select_point_sign_button"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:scrollbarAlwaysDrawVerticalTrack="false"
+            android:scrollbarSize="0dp"
+            android:scrollbarThumbVertical="@android:color/transparent"
+            android:scrollbars="none">
+
+            <Button
+                android:id="@+id/button4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="1" />
+
+            <Button
+                android:id="@+id/button5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="2" />
+
+            <Button
+                android:id="@+id/button6"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="3" />
+        </LinearLayout>
+    </ScrollView>
+
+    <ScrollView
+        android:layout_width="54dp"
+        android:layout_height="121dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="88dp"
+        app:layout_constraintBottom_toTopOf="@+id/select_linear_sign_button"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <Button
+        android:id="@+id/select_point_sign_button"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:onClick="openPointSignSelector"
+        android:text="+"
+        app:layout_constraintBottom_toTopOf="@+id/save_point_button"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/select_linear_sign_button"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:onClick="openLinearSignSelector"
+        android:text="+"
+        app:layout_constraintBottom_toTopOf="@+id/start_track_button"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
