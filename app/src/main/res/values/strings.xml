@@ -21,4 +21,5 @@
     <string name="bt_not_available_title">Bluetooth not available</string>
     <string name="bt_not_available_text">Your phone does not support Bluetooth</string>
     <string name="bt_not_available_exit">Exit</string>
+    <string name="point_101_001">point 101.001</string>
 </resources>

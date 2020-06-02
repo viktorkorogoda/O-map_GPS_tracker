@@ -111,21 +111,21 @@
             android:orientation="vertical" />
     </ScrollView>
 
-    <Button
+    <ImageButton
         android:id="@+id/select_point_sign_button"
         android:layout_width="70dp"
         android:layout_height="70dp"
-        android:onClick="openPointSignSelector"
-        android:text="+"
+        android:src="@drawable/plus_pic_1"
+        android:scaleType="fitCenter"
         app:layout_constraintBottom_toTopOf="@+id/save_point_button"
         app:layout_constraintStart_toStartOf="parent" />
 
-    <Button
+    <ImageButton
         android:id="@+id/select_linear_sign_button"
         android:layout_width="70dp"
         android:layout_height="70dp"
-        android:onClick="openLinearSignSelector"
-        android:text="+"
+        android:src="@drawable/plus_pic_1"
+        android:scaleType="fitCenter"
         app:layout_constraintBottom_toTopOf="@+id/start_track_button"
         app:layout_constraintEnd_toEndOf="parent" />
 

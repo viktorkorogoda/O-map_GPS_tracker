@@ -16,14 +16,19 @@ import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
 import android.widget.GridLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.navigation.NavigationView;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -44,6 +49,8 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
     private AppBarConfiguration mAppBarConfiguration;
+    private String selectedPointSign = "";
+    private String selectedLinearSign = "";
 
     private final BroadcastReceiver bReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -86,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
         sView.setVerticalScrollBarEnabled(false);
         sView.setHorizontalScrollBarEnabled(false);
 
-        Button selectPointSignButton = findViewById(R.id.select_point_sign_button);
+        ImageButton selectPointSignButton = findViewById(R.id.select_point_sign_button);
         selectPointSignButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -95,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         
-        Button selectLinearButton = findViewById(R.id.select_linear_sign_button);
+        ImageButton selectLinearButton = findViewById(R.id.select_linear_sign_button);
         selectLinearButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -113,9 +120,17 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+         Button savePointButton = findViewById(R.id.save_point_button);
+         savePointButton.setOnClickListener(new View.OnClickListener() {
+             @Override
+             public void onClick(View v) {
+
+             }
+         });
     }
 
-    private void initGridLayout(androidx.gridlayout.widget.GridLayout pointSignsView, String prefix) {
+    private void initGridLayout(GridLayout pointSignsView, String prefix) {
         List<Integer> pointSetNames = getPicNames(prefix);
         int total = pointSetNames.size();
         int column = 8;
@@ -130,7 +145,7 @@ public class MainActivity extends AppCompatActivity {
         pointSignsView.addView(gridLayout);
     }
 
-    private ImageView createImageView(int imagesResource, int column, int row) {
+    private ImageView createImageView(final int imagesResource, int column, int row) {
         ImageView oImageView = new ImageView(this);
         oImageView.setImageResource(imagesResource);
         GridLayout.LayoutParams param = new GridLayout.LayoutParams();
@@ -140,7 +155,71 @@ public class MainActivity extends AppCompatActivity {
         param.columnSpec = GridLayout.spec(column);
         param.rowSpec = GridLayout.spec(row);
         oImageView.setLayoutParams(param);
+        oImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Map<String, String> signName = getSingName(v.getResources().getResourceEntryName(imagesResource));
+                if (signName.get(POINT) != null) {
+                    selectedPointSign = signName.get(POINT);
+                    showToast(selectedPointSign + " selected");
+                    ImageButton button = findViewById(R.id.select_point_sign_button);
+                    button.setImageResource(imagesResource);
+                }
+                if (signName.get(LINEAR) != null) {
+                    selectedLinearSign = signName.get(LINEAR);
+                    showToast(selectedLinearSign + " selected");
+                    ImageButton button = findViewById(R.id.select_linear_sign_button);
+                    button.setImageResource(imagesResource);
+                }
+            }
+        });
+        oImageView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                TextView signTitle = ((ConstraintLayout)v.getParent().getParent().getParent()).findViewById(R.id.point_scroll_container_sign_title);
+                String signName = v.getResources().getResourceEntryName(imagesResource);
+                if (signName.startsWith(POINT)) {
+                    setTextViewTitle(signTitle, signName);
+                }
+                if (signName.startsWith(LINEAR)) {
+                    setTextViewTitle(signTitle, signName);
+                }
+                return true;
+            }
+        });
         return oImageView;
+    }
+
+    private void setTextViewTitle(TextView textView, String signName) {
+        int stringId = getResources().getIdentifier(signName, "string", getPackageName());
+        if (stringId != 0) {
+            textView.setText(getResources().getString(stringId));
+        } else {
+            textView.setText("");
+        }
+    }
+
+    private Map<String, String> getSingName(String resourceEntryName) {
+        Map<String, String> signName = new HashMap<>();
+        if (resourceEntryName != null) {
+            if (resourceEntryName.startsWith(POINT)) {
+                String[] strings = resourceEntryName.split(POINT + "_");
+                if (strings.length > 0) {
+                    signName.put(POINT, strings[1].replace("_", "."));
+                }
+            } else {
+                String[] strings = resourceEntryName.split(LINEAR + "_");
+                if (strings.length > 0) {
+                    signName.put(LINEAR, strings[1].replace("_", "."));
+                }
+            }
+        }
+        return signName;
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT)
+                .show();
     }
 
     private GridLayout createGridLayout(List<Integer> pointSetNames, int total, int column) {
@@ -188,49 +267,44 @@ public class MainActivity extends AppCompatActivity {
 
     public void openPointSignSelector() {
         LayoutInflater inflater = LayoutInflater.from(this);
-        androidx.gridlayout.widget.GridLayout pointSignsView = (androidx.gridlayout.widget.GridLayout) inflater.inflate(R.layout.points_signs_view, null);
+        ConstraintLayout pointSignsView = (ConstraintLayout) inflater.inflate(R.layout.point_scroll_container, null);
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
         alertDialog.setView(pointSignsView);
         AlertDialog alert = alertDialog.create();
         alert.show();
-        initGridLayout(pointSignsView, POINT);
+        initGridLayout((GridLayout) pointSignsView.findViewById(R.id.point_scroll_view), POINT);
     }
 
     public void openLinearSignSelector() {
         LayoutInflater inflater = LayoutInflater.from(this);
-        androidx.gridlayout.widget.GridLayout linearSignsView = (androidx.gridlayout.widget.GridLayout) inflater.inflate(R.layout.linear_grid_layout, null);
+        ConstraintLayout linearSignsView = (ConstraintLayout) inflater.inflate(R.layout.linear_grid_layout, null);
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
         alertDialog.setView(linearSignsView);
         AlertDialog alert = alertDialog.create();
         alert.show();
-        initGridLayout(linearSignsView, LINEAR);
+        initGridLayout((GridLayout) linearSignsView.findViewById(R.id.linear_scroll_view), LINEAR);
     }
 
     public void openBluetoothSearchDialog() {
         LayoutInflater inflater = LayoutInflater.from(this);
         ConstraintLayout btDevicesLayout = (ConstraintLayout) inflater.inflate(R.layout.bt_search_layout, null);
         fillViewWithBtDevices(btDevicesLayout);
-        registerBtReceiver();
+//        registerBtReceiver();
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
         alertDialog.setView(btDevicesLayout);
-        alertDialog.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                unregisterReceiver(bReceiver);
-            }
-        });
+        alertDialog.setPositiveButton("OK", null);
         AlertDialog alert = alertDialog.create();
         alert.show();
 
-        Button searchBtButton = btDevicesLayout.findViewById(R.id.new_bt_search_button);
-        searchBtButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                btDeviceAdapter.getBtDevices().clear();
-                btDeviceAdapter.notifyDataSetChanged();
-                bluetoothAdapter.startDiscovery();
-            }
-        });
+//        Button searchBtButton = btDevicesLayout.findViewById(R.id.new_bt_search_button);
+//        searchBtButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                btDeviceAdapter.getBtDevices().clear();
+//                btDeviceAdapter.notifyDataSetChanged();
+//                bluetoothAdapter.startDiscovery();
+//            }
+//        });
     }
 
     private void registerBtReceiver() {
