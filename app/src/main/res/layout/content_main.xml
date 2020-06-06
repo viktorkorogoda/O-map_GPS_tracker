@@ -21,30 +21,28 @@
 
     <Button
         android:id="@+id/save_point_button"
-        android:layout_width="195dp"
-        android:layout_height="50dp"
-        android:layout_marginBottom="16dp"
+        android:layout_width="212dp"
+        android:layout_height="63dp"
         android:text="@string/point_button"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/start_track_button"
-        android:layout_width="182dp"
-        android:layout_height="46dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginBottom="18dp"
+        android:layout_width="186dp"
+        android:layout_height="63dp"
         android:text="@string/track_start_btn"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/save_point_button" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <Switch
-        android:id="@+id/all_time_track_switch"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="16dp"
+    <TextView
+        android:id="@+id/all_time_track_text"
+        android:layout_width="130dp"
+        android:layout_height="19dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="4dp"
         android:text="@string/all_time_track"
+        android:textSize="18sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -52,19 +50,17 @@
         android:id="@+id/bluetooth_search_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="124dp"
-        android:layout_marginTop="16dp"
         android:text="@string/search_bluetooth"
         android:textSize="12sp"
-        app:layout_constraintStart_toEndOf="@+id/all_time_track_switch"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView
         android:id="@+id/point_sign_scroll_view"
         android:layout_width="56dp"
         android:layout_height="183dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginBottom="59dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="24dp"
         app:layout_constraintBottom_toTopOf="@+id/select_point_sign_button"
         app:layout_constraintStart_toStartOf="parent">
 
@@ -100,8 +96,8 @@
     <ScrollView
         android:layout_width="54dp"
         android:layout_height="121dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="88dp"
+        android:layout_marginEnd="6dp"
+        android:layout_marginBottom="12dp"
         app:layout_constraintBottom_toTopOf="@+id/select_linear_sign_button"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -115,18 +111,41 @@
         android:id="@+id/select_point_sign_button"
         android:layout_width="70dp"
         android:layout_height="70dp"
-        android:src="@drawable/plus_pic_1"
         android:scaleType="fitCenter"
+        android:src="@android:drawable/ic_input_add"
+        android:tint="#FFFFFF"
         app:layout_constraintBottom_toTopOf="@+id/save_point_button"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        tools:src="@android:drawable/ic_input_add" />
 
     <ImageButton
         android:id="@+id/select_linear_sign_button"
+        style="@android:style/Widget.Material.Light.ImageButton"
         android:layout_width="70dp"
         android:layout_height="70dp"
-        android:src="@drawable/plus_pic_1"
         android:scaleType="fitCenter"
+        android:src="@android:drawable/ic_input_add"
+        android:tint="#FFFFFF"
         app:layout_constraintBottom_toTopOf="@+id/start_track_button"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <ImageButton
+        android:id="@+id/button_start_pause_all_time_track"
+        android:layout_width="57dp"
+        android:layout_height="57dp"
+        android:layout_marginLeft="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/all_time_track_text"
+        app:srcCompat="@android:drawable/ic_media_play" />
+
+    <ImageButton
+        android:id="@+id/button_stop_all_time_track"
+        android:clickable="false"
+        android:layout_width="57dp"
+        android:layout_height="57dp"
+        android:layout_marginStart="20dp"
+        app:layout_constraintStart_toEndOf="@+id/button_start_pause_all_time_track"
+        app:layout_constraintTop_toBottomOf="@+id/all_time_track_text"
+        app:srcCompat="@android:drawable/ic_delete" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
