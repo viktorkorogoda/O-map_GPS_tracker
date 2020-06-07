@@ -40,7 +40,9 @@ import com.google.android.material.snackbar.Snackbar;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
@@ -51,6 +53,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -64,11 +67,14 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String POINT = "point";
     private static final String LINEAR = "linear";
+    private static final String ALL_TIME_TRACKS = "allTimeTracks";
     private static final String START_PAUSE_BUTTON_START = "start_pause_button_start";
     private static final String TAG = MainActivity.class.getSimpleName();
     private BtDeviceAdapter btDeviceAdapter;
     private BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
+    private final static int REQUEST_CODE_ASK_PERMISSIONS = 1;
+    private static final String[] REQUIRED_SDK_PERMISSIONS = new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
     private static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
     private MyReceiver myReceiver;
@@ -169,13 +175,10 @@ public class MainActivity extends AppCompatActivity {
         stopAllTimeTrackButton.setEnabled(false);
 
         startPauseAllTimeTrackButton.setOnClickListener(v -> {
-            if (!checkPermissions()) {
-                requestPermissions();
-            } else {
-                mService.requestLocationUpdates();
-                if (allTimeGpx == null) {
-                    allTimeGpx = GPX.builder().version(GPX.Version.V11).build();
-                }
+
+            mService.requestLocationUpdates();
+            if (allTimeGpx == null) {
+                allTimeGpx = GPX.builder().version(GPX.Version.V11).build();
             }
 
             if (startPauseButtonIsStart()) {
@@ -200,6 +203,15 @@ public class MainActivity extends AppCompatActivity {
             saveAllTimeTrack();
             allTimeGpx = null;
         });
+        checkPermissions();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mService.removeLocationUpdates();
+        stopAllTimeTracking();
+        saveAllTimeTrack();
     }
 
     @Override
@@ -354,7 +366,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
@@ -464,46 +475,6 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
     }
 
-    /**
-     * Returns the current state of the permissions needed.
-     */
-    private boolean checkPermissions() {
-        return PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION);
-    }
-
-    private void requestPermissions() {
-        boolean shouldProvideRationale =
-                ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION);
-
-        if (shouldProvideRationale) {
-            Log.i(TAG, "Displaying permission rationale to provide additional context.");
-            Snackbar.make(
-                    findViewById(R.id.nav_host_fragment),
-                    R.string.permission_rationale,
-                    Snackbar.LENGTH_INDEFINITE)
-                    .setAction(R.string.ok, new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            // Request permission
-                            ActivityCompat.requestPermissions(MainActivity.this,
-                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                                    REQUEST_PERMISSIONS_REQUEST_CODE);
-                        }
-                    })
-                    .show();
-        } else {
-            Log.i(TAG, "Requesting permission");
-            ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    REQUEST_PERMISSIONS_REQUEST_CODE);
-        }
-    }
-
-    /**
-     * Callback received when a permissions request has been completed.
-     */
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
@@ -580,7 +551,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void buildGpx(Location location) {
-        if (allTimeGpx != null) {
+        if (allTimeGpx != null && location != null) {
             if (allTimeGpx.getTracks() != null && !allTimeGpx.getTracks().isEmpty()) {
                 allTimeGpx = allTimeGpx
                         .toBuilder()
@@ -618,13 +589,11 @@ public class MainActivity extends AppCompatActivity {
     private void saveAllTimeTrack() {
         try {
             if (allTimeGpx != null) {
-                String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/by.vk.omap";
-                File file = new File(path);
-                if (!file.exists()) {
-                    file.mkdir();
-                }
-//                requestPermissions(WRITE_EXTERNAL_STORAGE);
-                String time = Calendar.getInstance().getTime().toString().replace(" ", "").replace(".", "").replace(":", "");
+                String path = getPackageFolderName();
+                checkAndCreatePackageFolder(path);
+                path = path + File.separator + ALL_TIME_TRACKS;
+                checkFolderAndCreate(path);
+                String time = new SimpleDateFormat("dd-MM-YYYY HH:mm:ss").format(Calendar.getInstance().getTime());
                 GPX.write(allTimeGpx, path + File.separator + time + ".gpx");
                 showToast("gpx " + path + File.separator + time + ".gpx" + " was saved");
             }
@@ -633,33 +602,36 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void checkAndCreatePackageFolder(String path) {
+        checkFolderAndCreate(path);
+    }
 
-    private void requestPermissions(String permission) {
-        boolean shouldProvideRationale =
-                ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        permission);
+    private String getPackageFolderName() {
+        return Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + getPackageName();
+    }
 
-        if (shouldProvideRationale) {
-            Log.i(TAG, "Displaying permission rationale to provide additional context.");
-            Snackbar.make(
-                    findViewById(R.id.nav_host_fragment),
-                    R.string.permission_rationale,
-                    Snackbar.LENGTH_INDEFINITE)
-                    .setAction(R.string.ok, new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            // Request permission
-                            ActivityCompat.requestPermissions(MainActivity.this,
-                                    new String[]{permission},
-                                    REQUEST_PERMISSIONS_REQUEST_CODE);
-                        }
-                    })
-                    .show();
+    private void checkFolderAndCreate(String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            file.mkdir();
+        }
+    }
+
+    protected void checkPermissions() {
+        final List<String> missingPermissions = new ArrayList<>();
+        for (final String permission : REQUIRED_SDK_PERMISSIONS) {
+            final int result = ContextCompat.checkSelfPermission(this, permission);
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                missingPermissions.add(permission);
+            }
+        }
+        if (!missingPermissions.isEmpty()) {
+            final String[] permissions = missingPermissions.toArray(new String[missingPermissions.size()]);
+            ActivityCompat.requestPermissions(this, permissions, REQUEST_CODE_ASK_PERMISSIONS);
         } else {
-            Log.i(TAG, "Requesting permission");
-            ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{permission},
-                    REQUEST_PERMISSIONS_REQUEST_CODE);
+            final int[] grantResults = new int[REQUIRED_SDK_PERMISSIONS.length];
+            Arrays.fill(grantResults, PackageManager.PERMISSION_GRANTED);
+            onRequestPermissionsResult(REQUEST_CODE_ASK_PERMISSIONS, REQUIRED_SDK_PERMISSIONS, grantResults);
         }
     }
 }

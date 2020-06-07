@@ -37,7 +37,7 @@
 
     <TextView
         android:id="@+id/all_time_track_text"
-        android:layout_width="130dp"
+        android:layout_width="wrap_content"
         android:layout_height="19dp"
         android:layout_marginLeft="10dp"
         android:layout_marginTop="4dp"

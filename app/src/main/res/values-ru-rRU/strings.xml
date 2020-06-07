@@ -4,4 +4,7 @@
     <string name="point_button">Точка</string>
     <string name="track_start_btn">Запись трека</string>
     <string name="track_stop_btn">Остановить</string>
+    <string name="all_time_track">Постоянная запись</string>
+    <string name="bluetooth_text">Bluetooth</string>
+    <string name="search_bluetooth">Поиск Bluetooth</string>
 </resources>
