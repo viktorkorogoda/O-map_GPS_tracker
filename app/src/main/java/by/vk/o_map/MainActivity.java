@@ -44,8 +44,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -62,6 +64,16 @@ import androidx.navigation.ui.NavigationUI;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import io.jenetics.jpx.GPX;
+import io.jenetics.jpx.Track;
+import io.jenetics.jpx.TrackSegment;
+
+import static by.vk.o_map.Constants.CONTINUE;
+import static by.vk.o_map.Constants.DATE_TIME_PATTERN;
+import static by.vk.o_map.Constants.GPX_EXTENSION;
+import static by.vk.o_map.Constants.PAUSE;
+import static by.vk.o_map.Constants.SELECTED;
+import static by.vk.o_map.Constants.START;
+import static java.util.stream.Collectors.toList;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -80,17 +92,26 @@ public class MainActivity extends AppCompatActivity {
     private MyReceiver myReceiver;
     private GPSTrackerService mService = null;
     private boolean mBound = false;
-    private GPX allTimeGpx;
+    private GPX allTimeGpxTrack;
+    private GPX allTimeGpxTackSegment;
+    private List<GPX> allTimeGpxSegments = new ArrayList<>();
     private GPX linearTrackGpx;
 
+    private boolean startButtonPressed;
+    private boolean pauseButtonPressed;
+    private boolean continueButtonPressed;
+    private boolean createNewSegment;
 
-    Handler handler;
-    Runnable runnable;
+    private Handler handler;
+    private Runnable runnable;
 
     private AppBarConfiguration mAppBarConfiguration;
     private String selectedPointSign = "";
     private String selectedLinearSign = "";
     SharedPreferences sharedPreferences;
+
+    private String action = "START";
+    private String nextAction = "PAUSE";
 
     private final BroadcastReceiver bReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -171,39 +192,85 @@ public class MainActivity extends AppCompatActivity {
 
         });
         final ImageButton startPauseAllTimeTrackButton = findViewById(R.id.button_start_pause_all_time_track);
+        startPauseAllTimeTrackButton.setTooltipText(START);
         final ImageButton stopAllTimeTrackButton = findViewById(R.id.button_stop_all_time_track);
         stopAllTimeTrackButton.setEnabled(false);
 
         startPauseAllTimeTrackButton.setOnClickListener(v -> {
 
-            mService.requestLocationUpdates();
-            if (allTimeGpx == null) {
-                allTimeGpx = GPX.builder().version(GPX.Version.V11).build();
+            switch (startPauseAllTimeTrackButton.getTooltipText().toString()) {
+                case START:
+                    action = START;
+                    break;
+                case PAUSE:
+                    action = PAUSE;
+                    break;
+                case CONTINUE:
+                    action = CONTINUE;
+                    break;
             }
 
-            if (startPauseButtonIsStart()) {
+            if (action.equals(START)) {
+                if (allTimeGpxTrack == null) {
+                    allTimeGpxTrack = GPX.builder().version(GPX.Version.V11).build();
+                }
+                allTimeGpxTackSegment = GPX.builder().version(GPX.Version.V11).build();
+                mService.requestLocationUpdates();
+                createNewSegment = true;
+                startPauseAllTimeTrackButton.setTooltipText(PAUSE);
                 startPauseAllTimeTracking(false);
-                setStartPauseButtonPauseState();
                 setPausePic(startPauseAllTimeTrackButton);
-            } else {
+            }
+            if (action.equals(PAUSE)) {
+                allTimeGpxSegments.add(allTimeGpxTackSegment);
+                startPauseAllTimeTrackButton.setTooltipText(CONTINUE);
                 startPauseAllTimeTracking(true);
-                setStartPauseButtonStartState();
                 mService.removeLocationUpdates();
                 setStartPic(startPauseAllTimeTrackButton);
+                allTimeGpxTackSegment = null;
+            }
+            if (action.equals(CONTINUE)) {
+                allTimeGpxTackSegment = GPX.builder().version(GPX.Version.V11).build();
+                mService.requestLocationUpdates();
+                startPauseAllTimeTrackButton.setTooltipText(PAUSE);
+                createNewSegment = true;
+                startPauseAllTimeTracking(false);
+                setPausePic(startPauseAllTimeTrackButton);
             }
             stopAllTimeTrackButton.setEnabled(true);
         });
 
         stopAllTimeTrackButton.setOnClickListener(v -> {
+            startPauseAllTimeTrackButton.setTooltipText(START);
             setStartPic(startPauseAllTimeTrackButton);
             setStartPauseButtonStartState();
             stopAllTimeTrackButton.setEnabled(false);
             mService.removeLocationUpdates();
+            if (allTimeGpxTackSegment != null) {
+                allTimeGpxSegments.add(allTimeGpxTackSegment);
+            }
+            buildAllTimeGpxTrackFromSegments();
             stopAllTimeTracking();
             saveAllTimeTrack();
-            allTimeGpx = null;
+            allTimeGpxSegments.clear();
+            allTimeGpxTrack = null;
+            createNewSegment = true;
         });
         checkPermissions();
+    }
+
+    private void buildAllTimeGpxTrackFromSegments() {
+        for (Track track : allTimeGpxTrack.getTracks()) {
+            track.getSegments().clear();
+            for (GPX allTimeGpxSegment : allTimeGpxSegments) {
+                List<TrackSegment> trackSegments = allTimeGpxSegment.getTracks().stream()
+                        .map(Track::getSegments)
+                        .flatMap(Collection::stream)
+                        .collect(toList());
+                track.getSegments().addAll(trackSegments);
+            }
+        }
+
     }
 
     @Override
@@ -278,13 +345,13 @@ public class MainActivity extends AppCompatActivity {
             Map<String, String> signName = getSingName(v.getResources().getResourceEntryName(imagesResource));
             if (signName.get(POINT) != null) {
                 selectedPointSign = signName.get(POINT);
-                showToast(selectedPointSign + " selected");
+                showToast(selectedPointSign + SELECTED);
                 ImageButton button = findViewById(R.id.select_point_sign_button);
                 button.setImageResource(imagesResource);
             }
             if (signName.get(LINEAR) != null) {
                 selectedLinearSign = signName.get(LINEAR);
-                showToast(selectedLinearSign + " selected");
+                showToast(selectedLinearSign + SELECTED);
                 ImageButton button = findViewById(R.id.select_linear_sign_button);
                 button.setImageResource(imagesResource);
             }
@@ -478,12 +545,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
-        Log.i(TAG, "onRequestPermissionResult");
         if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
             if (grantResults.length <= 0) {
                 // If user interaction was interrupted, the permission request is cancelled and you
                 // receive empty arrays.
-                Log.i(TAG, "User interaction was cancelled.");
             } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission was granted.
                 mService.requestLocationUpdates();
@@ -528,7 +593,6 @@ public class MainActivity extends AppCompatActivity {
             runnable = new Runnable() {
                 @Override
                 public void run() {
-                    Log.i(TAG, "message");
                     handler.postDelayed(this, delay);
                     buildGpx(mService.getmLocation());
                 }
@@ -537,8 +601,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             if (runnable != null) {
                 handler.removeCallbacks(runnable);
-                Log.i(TAG, "runnable removed");
-                Log.i(TAG, allTimeGpx.toString());
+                Log.i(TAG, allTimeGpxTrack.toString());
             }
         }
     }
@@ -546,56 +609,72 @@ public class MainActivity extends AppCompatActivity {
     private void stopAllTimeTracking() {
         if (runnable != null) {
             handler.removeCallbacks(runnable);
-            Log.i(TAG, "runnable removed");
         }
     }
 
     private void buildGpx(Location location) {
-        if (allTimeGpx != null && location != null) {
-            if (allTimeGpx.getTracks() != null && !allTimeGpx.getTracks().isEmpty()) {
-                allTimeGpx = allTimeGpx
-                        .toBuilder()
-                        .trackFilter()
-                        .map(track -> track.toBuilder()
-                                .map(segment -> segment.toBuilder()
-                                        .addPoint(point -> point.lat(location.getLatitude())
-                                                .lon(location.getLongitude())
-                                                .ele(location.getAltitude())
-                                                .speed(location.getSpeed())
-                                                .course(location.getBearing())
-                                                .time(location.getTime()))
-                                        .build())
-                                .build())
-                        .build()
-                        .build();
-                Log.i(TAG, allTimeGpx.toString());
-            } else {
-                allTimeGpx = allTimeGpx
-                        .toBuilder()
-                        .addTrack(track ->
-                                track.addSegment(segment ->
-                                        segment.addPoint(point ->
-                                                point.lat(location.getLatitude())
-                                                        .lon(location.getLongitude())
-                                                        .ele(location.getAltitude())
-                                                        .speed(location.getSpeed())
-                                                        .course(location.getBearing())
-                                                        .time(location.getTime()))))
-                        .build();
+        if (allTimeGpxTrack != null && location != null) {
+            if (action.equals(CONTINUE)) {
+                addPointToLastSegment(location);
+                Log.i(TAG, allTimeGpxTrack.getTracks().toString());
+            }
+            if (action.equals(START)) {
+                if (createNewSegment) {
+                    allTimeGpxTrack = allTimeGpxTrack
+                            .toBuilder()
+                            .addTrack(track -> track.addSegment(segment -> segment.addPoint(point -> point.lat(location.getLatitude())
+                                    .lon(location.getLongitude())
+                                    .ele(location.getAltitude())
+                                    .speed(location.getSpeed())
+                                    .course(location.getBearing())
+                                    .time(location.getTime()).build())))
+                            .build();
+                    createNewSegment = false;
+                }
+                Log.i(TAG, allTimeGpxTrack.getTracks().toString());
+                addPointToLastSegment(location);
             }
         }
     }
 
+    private void addPointToLastSegment(Location location) {
+        if (allTimeGpxTackSegment.getTracks().isEmpty()) {
+            allTimeGpxTackSegment = allTimeGpxTackSegment
+                    .toBuilder()
+                    .addTrack(track -> track.addSegment(segment -> segment.addPoint(point -> point.lat(location.getLatitude())
+                            .lon(location.getLongitude())
+                            .ele(location.getAltitude())
+                            .speed(location.getSpeed())
+                            .course(location.getBearing())
+                            .time(location.getTime()).build())))
+                    .build();
+            createNewSegment = false;
+        }
+
+        allTimeGpxTackSegment = allTimeGpxTackSegment.toBuilder()
+                .trackFilter()
+                .map(track -> track.toBuilder()
+                        .map(segment -> segment.toBuilder().addPoint(point -> point.lat(location.getLatitude())
+                                .lon(location.getLongitude())
+                                .ele(location.getAltitude())
+                                .speed(location.getSpeed())
+                                .course(location.getBearing())
+                                .time(location.getTime()).build()).build())
+                        .build())
+                .build()
+                .build();
+    }
+
     private void saveAllTimeTrack() {
         try {
-            if (allTimeGpx != null) {
+            if (allTimeGpxTrack != null) {
                 String path = getPackageFolderName();
                 checkAndCreatePackageFolder(path);
                 path = path + File.separator + ALL_TIME_TRACKS;
                 checkFolderAndCreate(path);
-                String time = new SimpleDateFormat("dd-MM-YYYY HH:mm:ss").format(Calendar.getInstance().getTime());
-                GPX.write(allTimeGpx, path + File.separator + time + ".gpx");
-                showToast("gpx " + path + File.separator + time + ".gpx" + " was saved");
+                String time = new SimpleDateFormat(DATE_TIME_PATTERN, Locale.getDefault()).format(Calendar.getInstance().getTime());
+                GPX.write(allTimeGpxTrack, path + File.separator + time + GPX_EXTENSION);
+                showToast("gpx " + path + File.separator + time + GPX_EXTENSION + " was saved");
             }
         } catch (IOException e) {
             e.printStackTrace();
