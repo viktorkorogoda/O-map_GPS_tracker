@@ -50,6 +50,8 @@
         android:id="@+id/bluetooth_search_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="100dp"
+        android:layout_marginEnd="4dp"
         android:text="@string/search_bluetooth"
         android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -147,5 +149,15 @@
         app:layout_constraintStart_toEndOf="@+id/button_start_pause_all_time_track"
         app:layout_constraintTop_toBottomOf="@+id/all_time_track_text"
         app:srcCompat="@android:drawable/ic_delete" />
+
+    <TextView
+        android:id="@+id/distance"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="20dp"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/button_start_pause_all_time_track" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

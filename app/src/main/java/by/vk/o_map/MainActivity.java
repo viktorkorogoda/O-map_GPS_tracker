@@ -11,7 +11,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
@@ -19,7 +18,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
@@ -40,6 +38,7 @@ import com.google.android.material.snackbar.Snackbar;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -93,13 +92,10 @@ public class MainActivity extends AppCompatActivity {
     private GPSTrackerService mService = null;
     private boolean mBound = false;
     private GPX allTimeGpxTrack;
-    private GPX allTimeGpxTackSegment;
+    private GPX allTimeGpxTrackSegment;
     private List<GPX> allTimeGpxSegments = new ArrayList<>();
     private GPX linearTrackGpx;
 
-    private boolean startButtonPressed;
-    private boolean pauseButtonPressed;
-    private boolean continueButtonPressed;
     private boolean createNewSegment;
 
     private Handler handler;
@@ -108,10 +104,15 @@ public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration mAppBarConfiguration;
     private String selectedPointSign = "";
     private String selectedLinearSign = "";
-    SharedPreferences sharedPreferences;
+
+
+    private float mMaxAcceptableAccuracy = 100;
+    private Location mPreviousLocation;
+    private float mDistance = 0;
+
+    DecimalFormat decimalFormat = new DecimalFormat();
 
     private String action = "START";
-    private String nextAction = "PAUSE";
 
     private final BroadcastReceiver bReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -166,13 +167,13 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupWithNavController(navigationView, navController);
 
+        decimalFormat.setMaximumFractionDigits(2);
         ScrollView sView = findViewById(R.id.point_sign_scroll_view);
         sView.setVerticalScrollBarEnabled(false);
         sView.setHorizontalScrollBarEnabled(false);
         handler = new Handler();
         myReceiver = new MyReceiver();
 
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
         loadStartPauseButtonState();
         ImageButton selectPointSignButton = findViewById(R.id.select_point_sign_button);
         selectPointSignButton.setOnClickListener(view -> openPointSignSelector());
@@ -211,10 +212,11 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (action.equals(START)) {
+                mDistance = 0;
                 if (allTimeGpxTrack == null) {
                     allTimeGpxTrack = GPX.builder().version(GPX.Version.V11).build();
                 }
-                allTimeGpxTackSegment = GPX.builder().version(GPX.Version.V11).build();
+                allTimeGpxTrackSegment = GPX.builder().version(GPX.Version.V11).build();
                 mService.requestLocationUpdates();
                 createNewSegment = true;
                 startPauseAllTimeTrackButton.setTooltipText(PAUSE);
@@ -222,15 +224,16 @@ public class MainActivity extends AppCompatActivity {
                 setPausePic(startPauseAllTimeTrackButton);
             }
             if (action.equals(PAUSE)) {
-                allTimeGpxSegments.add(allTimeGpxTackSegment);
+                allTimeGpxSegments.add(allTimeGpxTrackSegment);
                 startPauseAllTimeTrackButton.setTooltipText(CONTINUE);
                 startPauseAllTimeTracking(true);
                 mService.removeLocationUpdates();
                 setStartPic(startPauseAllTimeTrackButton);
-                allTimeGpxTackSegment = null;
+                allTimeGpxTrackSegment = null;
+                mPreviousLocation = null;
             }
             if (action.equals(CONTINUE)) {
-                allTimeGpxTackSegment = GPX.builder().version(GPX.Version.V11).build();
+                allTimeGpxTrackSegment = GPX.builder().version(GPX.Version.V11).build();
                 mService.requestLocationUpdates();
                 startPauseAllTimeTrackButton.setTooltipText(PAUSE);
                 createNewSegment = true;
@@ -243,18 +246,20 @@ public class MainActivity extends AppCompatActivity {
         stopAllTimeTrackButton.setOnClickListener(v -> {
             startPauseAllTimeTrackButton.setTooltipText(START);
             setStartPic(startPauseAllTimeTrackButton);
-            setStartPauseButtonStartState();
             stopAllTimeTrackButton.setEnabled(false);
             mService.removeLocationUpdates();
-            if (allTimeGpxTackSegment != null) {
-                allTimeGpxSegments.add(allTimeGpxTackSegment);
+            if (allTimeGpxTrackSegment != null) {
+                allTimeGpxSegments.add(allTimeGpxTrackSegment);
             }
             buildAllTimeGpxTrackFromSegments();
             stopAllTimeTracking();
             saveAllTimeTrack();
             allTimeGpxSegments.clear();
             allTimeGpxTrack = null;
+            allTimeGpxTrackSegment = null;
             createNewSegment = true;
+            mPreviousLocation = null;
+            ((TextView) findViewById(R.id.distance)).setText("");
         });
         checkPermissions();
     }
@@ -288,18 +293,6 @@ public class MainActivity extends AppCompatActivity {
                 Context.BIND_AUTO_CREATE);
     }
 
-    private void setStartPauseButtonStartState() {
-        SharedPreferences.Editor edit = sharedPreferences.edit();
-        edit.putBoolean(START_PAUSE_BUTTON_START, true);
-        edit.apply();
-    }
-
-    private void setStartPauseButtonPauseState() {
-        SharedPreferences.Editor edit = sharedPreferences.edit();
-        edit.putBoolean(START_PAUSE_BUTTON_START, false);
-        edit.apply();
-    }
-
     private void loadStartPauseButtonState() {
         setStartPic(findViewById(R.id.button_start_pause_all_time_track));
     }
@@ -310,10 +303,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void setPausePic(ImageButton imageButton) {
         imageButton.setImageDrawable(getResources().getDrawable(android.R.drawable.ic_media_pause));
-    }
-
-    private boolean startPauseButtonIsStart() {
-        return sharedPreferences.getBoolean(START_PAUSE_BUTTON_START, true);
     }
 
     private void initGridLayout(GridLayout pointSignsView, String prefix) {
@@ -594,7 +583,15 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     handler.postDelayed(this, delay);
-                    buildGpx(mService.getmLocation());
+                    Location location = mService.getmLocation();
+                    if (isValidLocation(location)) {
+                        buildGpx(location);
+                        TextView distanceTextView = findViewById(R.id.distance);
+                        if (mDistance > 0) {
+                            distanceTextView.setText(decimalFormat.format(mDistance));
+                            showToast("altitude: " + decimalFormat.format(location.getAltitude()));
+                        }
+                    }
                 }
             };
             handler.postDelayed(runnable, delay);
@@ -604,6 +601,31 @@ public class MainActivity extends AppCompatActivity {
                 Log.i(TAG, allTimeGpxTrack.toString());
             }
         }
+    }
+
+    private void plusDistance(Location location) {
+        if (mPreviousLocation != null) {
+            mDistance += mPreviousLocation.distanceTo(location);
+        }
+    }
+
+    private boolean isValidLocation(Location location) {
+        return location.getAltitude() > 0 && location.getSpeed() > 0;
+    }
+
+    private boolean isNotFarAwayFromPreviousLocation(Location location) {
+        float distance = mPreviousLocation.distanceTo(location);
+        boolean notFarAway = distance < mMaxAcceptableAccuracy;
+        if (notFarAway) {
+            return true;
+        } else {
+            mPreviousLocation = null;
+            return false;
+        }
+    }
+
+    private boolean isEqualLocation(Location location) {
+        return mPreviousLocation == null || mPreviousLocation.getLatitude() == location.getLatitude() && mPreviousLocation.getLongitude() == location.getLongitude() && mPreviousLocation.getAltitude() == location.getAltitude();
     }
 
     private void stopAllTimeTracking() {
@@ -622,47 +644,61 @@ public class MainActivity extends AppCompatActivity {
                 if (createNewSegment) {
                     allTimeGpxTrack = allTimeGpxTrack
                             .toBuilder()
-                            .addTrack(track -> track.addSegment(segment -> segment.addPoint(point -> point.lat(location.getLatitude())
-                                    .lon(location.getLongitude())
-                                    .ele(location.getAltitude())
-                                    .speed(location.getSpeed())
-                                    .course(location.getBearing())
-                                    .time(location.getTime()).build())))
+                            .addTrack(track -> track
+                                    .addSegment(segment -> segment
+                                            .addPoint(point -> point
+                                                    .lat(location.getLatitude())
+                                                    .lon(location.getLongitude())
+                                                    .ele(location.getAltitude())
+                                                    .speed(location.getSpeed())
+                                                    .course(location.getBearing())
+                                                    .time(location.getTime())
+                                                    .build())))
                             .build();
                     createNewSegment = false;
                 }
                 Log.i(TAG, allTimeGpxTrack.getTracks().toString());
                 addPointToLastSegment(location);
             }
+            plusDistance(location);
+            mPreviousLocation = location;
         }
     }
 
     private void addPointToLastSegment(Location location) {
-        if (allTimeGpxTackSegment.getTracks().isEmpty()) {
-            allTimeGpxTackSegment = allTimeGpxTackSegment
+        if (allTimeGpxTrackSegment.getTracks().isEmpty()) {
+            allTimeGpxTrackSegment = allTimeGpxTrackSegment
                     .toBuilder()
-                    .addTrack(track -> track.addSegment(segment -> segment.addPoint(point -> point.lat(location.getLatitude())
-                            .lon(location.getLongitude())
-                            .ele(location.getAltitude())
-                            .speed(location.getSpeed())
-                            .course(location.getBearing())
-                            .time(location.getTime()).build())))
+                    .addTrack(track -> track
+                            .addSegment(segment -> segment
+                                    .addPoint(point -> point
+                                            .lat(location.getLatitude())
+                                            .lon(location.getLongitude())
+                                            .ele(location.getAltitude())
+                                            .speed(location.getSpeed())
+                                            .course(location.getBearing())
+                                            .time(location.getTime())
+                                            .build())))
                     .build();
-            createNewSegment = false;
+        } else {
+            allTimeGpxTrackSegment = allTimeGpxTrackSegment.toBuilder()
+                    .trackFilter()
+                    .map(track -> track.toBuilder()
+                            .map(segment -> segment.toBuilder()
+                                    .addPoint(point -> point
+                                            .lat(location.getLatitude())
+                                            .lon(location.getLongitude())
+                                            .ele(location.getAltitude())
+                                            .speed(location.getSpeed())
+                                            .course(location.getBearing())
+                                            .time(location.getTime())
+                                            .build())
+                                    .build())
+                            .build())
+                    .build()
+                    .build();
         }
-
-        allTimeGpxTackSegment = allTimeGpxTackSegment.toBuilder()
-                .trackFilter()
-                .map(track -> track.toBuilder()
-                        .map(segment -> segment.toBuilder().addPoint(point -> point.lat(location.getLatitude())
-                                .lon(location.getLongitude())
-                                .ele(location.getAltitude())
-                                .speed(location.getSpeed())
-                                .course(location.getBearing())
-                                .time(location.getTime()).build()).build())
-                        .build())
-                .build()
-                .build();
+        createNewSegment = false;
     }
 
     private void saveAllTimeTrack() {
